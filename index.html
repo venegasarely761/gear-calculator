@@ -1,0 +1,1106 @@
+<title>Gear Calculator</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
+<style>
+/* Layout: rounded light-blue shell holding a blue header card, then full-width white cards stacked: gear inputs, result, top view, WCP gears. Fixed light theme, white and blue only, matching the belt, chain and motor spacer calculators. */
+:root {
+  --white: #ffffff;
+  --blue: #0075c9;
+  --blue-deep: #005a9c;
+  --blue-soft: #8cc2ea;
+  --blue-50: #f3f8fd;
+  --blue-100: #e3f0fa;
+  --line: #dce8f2;
+  --ink: #0f2a40;
+  --ink-soft: #5a7288;
+  --alert: #b3261e;
+  --alert-bg: #fdeeed;
+  --font: "Roboto", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  /* Same setting as the belt and chain calculators so the page does not paint a white backdrop behind it in dark mode. */
+  color-scheme: light dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: transparent; }
+body { background: transparent; color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.5; font-variant-numeric: tabular-nums; }
+[hidden] { display: none !important; }
+.shell { display: grid; gap: 8px; width: min(960px, calc(100% - 24px)); margin: 12px auto; padding: 10px; background: #e8f2fa; border: 1px solid #cfe3f3; border-radius: 22px; }
+.banner { position: relative; background: var(--blue); color: var(--white); padding: 11px 16px; text-align: center; border-radius: 16px; }
+.banner h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.01em; text-wrap: balance; }
+.banner p { margin: 1px auto 0; font-size: 13px; opacity: 0.9; max-width: 56ch; text-wrap: balance; }
+.ver { position: absolute; top: 8px; right: 16px; font-size: 11px; font-weight: 500; color: var(--white); opacity: 0.85; }
+main { display: grid; gap: 8px; }
+section { min-width: 0; }
+.card { background: var(--white); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 1px 2px rgba(0, 90, 156, 0.06), 0 8px 24px rgba(0, 90, 156, 0.08); padding: 20px; display: grid; gap: 18px; }
+.card h2 { margin: 0; line-height: 1; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--blue); }
+main > section:first-child .card { gap: 12px; position: relative; }
+main > section:first-child .fld { gap: 4px; }
+
+.fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; }
+.fld { display: grid; gap: 6px; align-content: start; min-width: 0; }
+.fld > label, .fld > .lbl { font-weight: 500; }
+.unit-field { display: flex; align-items: center; background: var(--blue-50); border: 1.5px solid var(--line); border-radius: 10px; padding-right: 12px; }
+.unit-field:focus-within { border-color: var(--blue); background: var(--white); }
+.field { width: 100%; min-width: 0; border: 0; background: transparent; font: 500 15px var(--font); color: var(--ink); padding: 8px 6px 8px 12px; outline: none; font-variant-numeric: tabular-nums; -moz-appearance: textfield; appearance: textfield; }
+.field::-webkit-outer-spin-button, .field::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.unit-field span { color: var(--ink-soft); font-weight: 500; }
+.hint { font-size: 13px; color: var(--ink-soft); }
+.hint a { color: var(--blue-deep); }
+.fld-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 8px 16px; }
+.fld-row .lbl { font-weight: 500; }
+.card-sub { display: grid; gap: 10px; }
+
+.toggle { position: relative; display: inline-flex; gap: 6px; }
+.toggle input { position: absolute; opacity: 0; pointer-events: none; }
+.toggle label { display: inline-flex; align-items: center; font-size: 12.5px; padding: 6px 14px; border: 1.5px solid var(--line); border-radius: 10px; background: var(--blue-50); cursor: pointer; font-weight: 500; }
+.toggle input:checked + label { border-color: var(--blue); background: var(--blue-100); color: var(--blue-deep); }
+.toggle input:focus-visible + label { outline: 3px solid var(--blue-soft); outline-offset: 2px; }
+
+.mini { position: relative; display: inline-flex; gap: 2px; padding: 2px; background: var(--blue-100); border-radius: 8px; }
+.mini input { position: absolute; opacity: 0; pointer-events: none; }
+.unit-sw { position: absolute; top: 14px; right: 20px; }
+.mini label { padding: 3px 9px; border-radius: 6px; font-size: 12px; font-weight: 500; color: var(--ink-soft); cursor: pointer; }
+.mini input:checked + label { background: var(--blue); color: var(--white); }
+.mini input:focus-visible + label { outline: 3px solid var(--blue-soft); outline-offset: 1px; }
+
+.seg-group { position: relative; display: grid; gap: 6px; }
+.seg-group.c2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.seg-group input { position: absolute; opacity: 0; pointer-events: none; }
+.seg-group label { display: grid; gap: 2px; padding: 6px 10px; border: 1.5px solid var(--line); border-radius: 10px; background: var(--blue-50); cursor: pointer; font-weight: 500; font-size: 12.5px; }
+.seg-group input:checked + label { border-color: var(--blue); background: var(--blue-100); color: var(--blue-deep); }
+.seg-group input:focus-visible + label { outline: 3px solid var(--blue-soft); outline-offset: 2px; }
+
+.hero { background: var(--blue); color: var(--white); border-radius: 12px; padding: 9px 14px; display: grid; gap: 1px; }
+.hero .lab { font-size: 11px; line-height: 1.3; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.85; }
+.hero .big { font-size: 24px; font-weight: 700; line-height: 1.1; letter-spacing: -0.01em; }
+.hero .sub { font-size: 13px; opacity: 0.92; }
+.hero.bad { background: var(--alert-bg); color: var(--alert); }
+.hero.bad .sub { opacity: 1; }
+
+.tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.tile { border: 1px solid var(--blue-100); background: var(--blue-50); border-radius: 12px; padding: 12px 8px; text-align: center; font: inherit; color: inherit; width: 100%; }
+button.tile { cursor: pointer; }
+button.tile:hover { background: var(--blue-100); }
+button.tile:focus-visible { outline: 3px solid var(--blue-soft); outline-offset: 2px; }
+.tile .count { font-size: 24px; font-weight: 700; line-height: 1.15; color: var(--blue); }
+.tile .size { font-size: 13px; font-weight: 500; color: var(--ink-soft); }
+.tile.hl { background: var(--blue-100); border-color: var(--blue-soft); }
+.tile .pn { font-size: 12px; font-weight: 500; color: var(--blue-deep); margin-top: 2px; }
+.sub-h { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
+
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+td, th { padding: 8px 0; border-top: 1px solid var(--line); text-align: left; font-weight: 400; }
+th { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-soft); border-top: 0; padding-top: 0; }
+tr:first-child td { border-top: 0; }
+td.num, th.num { text-align: right; padding-left: 12px; white-space: nowrap; }
+td.num { color: var(--ink-soft); }
+tr.head td { border-top: 1.5px solid var(--blue); font-weight: 700; color: var(--blue-deep); }
+a.buy { color: var(--blue-deep); font-weight: 500; }
+.note { font-size: 13px; color: var(--ink-soft); margin: 0; }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.pill { border: 1.5px solid var(--line); background: var(--blue-50); color: var(--blue-deep); font: 500 12.5px var(--font); padding: 5px 14px; border-radius: 10px; cursor: pointer; }
+.pill:hover { background: var(--blue-100); }
+.pill:focus-visible { outline: 3px solid var(--blue-soft); outline-offset: 2px; }
+.copybox { width: 100%; font: 400 13px/1.5 var(--font); color: var(--ink); background: var(--blue-50); border: 1.5px solid var(--line); border-radius: 10px; padding: 8px 12px; resize: vertical; }
+.fields.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.unit-field.ro { background: var(--white); border-style: dashed; }
+#twoBox, #trainBox { display: grid; gap: 12px; }
+.hd-tools { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.trow { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 14px; }
+.trow .fld { flex: 0 0 auto; }
+.trow .w-sm { width: 74px; }
+.trow .w-ex { width: 138px; }
+.trow .w-tgt { width: 168px; }
+.trow .pill { align-self: flex-end; margin-bottom: 2px; }
+.gbox { border: 1.5px solid var(--line); border-radius: 14px; background: var(--blue-50); padding: 10px 12px; margin: 0 0 8px; display: grid; gap: 8px; }
+.gbox .gtop { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.gbox .gt { font-size: 15px; font-weight: 500; line-height: 1.5; color: var(--ink); }
+.gbox .gpart { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 10px; background: #fff; border: 1.5px solid var(--line); border-radius: 10px; padding: 6px 10px; }
+.gbox .gpart + .gpart { margin-top: -4px; }
+.gbox .gpart .gname { font-size: 14px; color: var(--ink); }
+.gbox .gpart .gmeta { font-size: 13px; color: var(--ink-soft); margin-left: 6px; }
+.gbox .gpart .pill { padding: 2px 12px; font-size: 12px; }
+.gbox .gnone { font-size: 13px; color: var(--ink-soft); }
+.gbox .gsels { display: flex; flex-wrap: wrap; gap: 6px 14px; padding-bottom: 12px; margin-bottom: 6px; border-bottom: 1px solid var(--line); }
+.gbox .gopt { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; }
+.gbox .gopt .gl { flex: none; font-size: 12.5px; font-weight: 700; color: var(--ink); }
+.gbox .gopt .toggle { gap: 4px; flex-wrap: wrap; }
+.gbox .gopt .toggle label { white-space: nowrap; padding: 4px 9px; font-size: 12px; }
+.toggle input:disabled + label { opacity: 0.4; cursor: not-allowed; }
+.tgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px 8px; }
+.tgrid .fld { gap: 2px; }
+.tgrid label { font-size: 12px; color: var(--ink-soft); }
+.tgrid .field { padding-left: 10px; padding-right: 6px; }
+.unit-field.ro .field { color: var(--ink-soft); }
+.fields.three { align-items: end; }
+.fields.three .fld { align-content: end; }
+.fields.three .fld > label { font-size: 13px; line-height: 1.25; }
+@media (max-width: 520px) { .fields.three { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+td .pill { padding: 3px 12px; font-size: 12px; }
+.btn { display: inline-flex; align-items: center; padding: 10px 18px; border-radius: 10px; background: var(--blue); color: var(--white); text-decoration: none; border: 0; font: 700 15px var(--font); cursor: pointer; justify-content: center; width: 100%; gap: 8px; }
+.btn:hover { background: var(--blue-deep); }
+.btn:focus-visible { outline: 3px solid var(--blue-soft); outline-offset: 2px; }
+.btn.off { opacity: 0.45; pointer-events: none; }
+.slist { list-style: none; margin: 0; padding: 0 6px 0 0; max-height: 300px; overflow-y: auto; }
+.slist .none { padding: 18px 12px; text-align: center; color: var(--ink-soft); font-size: 13px; }
+.srow { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.srow:first-child { border-top: 0; }
+.srow .meta { flex: 1; min-width: 0; }
+.srow .meta strong { display: block; font-size: 14.5px; }
+.srow .meta span { font-size: 11px; color: var(--ink-soft); }
+.qty { display: inline-flex; align-items: center; gap: 4px; background: var(--blue-50); border: 1.5px solid var(--line); border-radius: 10px; padding: 2px; }
+.qty button { width: 26px; height: 26px; border: 0; background: transparent; color: var(--blue-deep); font: 500 17px var(--font); cursor: pointer; border-radius: 8px; }
+.qty button:hover { background: var(--blue-100); }
+.qty span { min-width: 22px; text-align: center; font-weight: 500; font-size: 14px; color: var(--ink); }
+.rm { border: 0; background: none; color: var(--ink-soft); text-decoration: underline; cursor: pointer; font: 400 13px var(--font); }
+
+.draw-wrap { background: var(--blue-50); border: 1px solid var(--blue-100); border-radius: 12px; overflow-x: auto; overflow-y: hidden; }
+svg.draw { display: block; margin: 0 auto; max-width: none; }
+svg.draw text { font-family: var(--font); }
+
+@media (max-width: 520px) {
+  .shell { width: calc(100% - 12px); margin: 6px auto; padding: 6px; border-radius: 18px; gap: 6px; }
+  .banner { padding: 15px 12px 9px; border-radius: 14px; }
+  .banner h1 { font-size: 19px; }
+  .banner p { font-size: 12px; }
+  .ver { top: 3px; right: 10px; font-size: 10px; }
+  main { gap: 6px; }
+  .card { padding: 12px; gap: 12px; border-radius: 14px; }
+  .unit-sw { top: 10px; right: 12px; }
+  .tiles { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: no-preference) { .unit-field, .seg-group label, .toggle label { transition: background 0.15s ease, border-color 0.15s ease; } }
+</style>
+
+<div class="shell">
+<header class="banner">
+  <span class="ver">v1.19.2</span>
+  <h1>Gear Calculator</h1>
+  <p>Center distance and ratio for gear meshes and gear trains</p>
+</header>
+
+<main>
+  <section aria-labelledby="in-h">
+    <div class="card">
+      <span class="mini unit-sw" role="radiogroup" aria-label="Units"><input type="radio" name="unit" id="u-in" value="in" checked><label for="u-in">in</label><input type="radio" name="unit" id="u-mm" value="mm"><label for="u-mm">mm</label></span>
+      <h2 id="in-h">Gear mesh</h2>
+
+      <div class="trow">
+        <div class="fld">
+          <span class="lbl">Setup</span>
+          <div class="toggle" role="radiogroup" aria-label="Setup">
+            <input type="radio" name="setup" id="su2" value="2" checked><label for="su2">Two Gears</label>
+            <input type="radio" name="setup" id="suT" value="T"><label for="suT">Gear Train</label>
+          </div>
+        </div>
+        <div class="fld">
+          <span class="lbl">Pitch</span>
+          <div class="toggle" role="radiogroup" aria-label="Diametral pitch">
+            <input type="radio" name="dp" id="dp10" value="10"><label for="dp10">10 DP</label>
+            <input type="radio" name="dp" id="dp20" value="20" checked><label for="dp20">20 DP</label>
+            <input type="radio" name="dp" id="dp32" value="32"><label for="dp32">32 DP</label>
+          </div>
+        </div>
+        <div class="fld w-ex">
+          <label for="ex">Extra Center</label>
+          <span class="unit-field"><input class="field" id="ex" type="number" inputmode="decimal" step="any" min="0" value="0"><span class="usfx">in</span></span>
+        </div>
+      </div>
+
+      <div class="fld" hidden>
+        <span class="lbl">Known Value</span>
+        <div class="seg-group c2" role="radiogroup" aria-label="Known value">
+          <input type="radio" name="mode" id="m1" value="1" checked><label for="m1">Gear Teeth</label>
+          <input type="radio" name="mode" id="m2" value="2"><label for="m2">Center Distance</label>
+        </div>
+      </div>
+
+      <div id="twoBox">
+      <div class="fields three">
+        <div class="fld">
+          <label for="t1">Gear 1 Teeth</label>
+          <span class="unit-field"><input class="field" id="t1" type="number" inputmode="numeric" step="1" min="6" value="20"></span>
+        </div>
+        <div class="fld">
+          <label for="pd1">Gear 1 Pitch Dia.</label>
+          <span class="unit-field ro"><input class="field" id="pd1" type="text" inputmode="none" readonly tabindex="-1"><span class="usfx">in</span></span>
+        </div>
+        <div class="fld">
+          <label for="od1">Gear 1 Outer Dia.</label>
+          <span class="unit-field ro"><input class="field" id="od1" type="text" inputmode="none" readonly tabindex="-1"><span class="usfx">in</span></span>
+        </div>
+        <div class="fld" id="t2Fld">
+          <label for="t2">Gear 2 Teeth</label>
+          <span class="unit-field"><input class="field" id="t2" type="number" inputmode="numeric" step="1" min="6" value="52"></span>
+        </div>
+        <div class="fld" id="cdFld" hidden>
+          <label for="cd">Desired Center</label>
+          <span class="unit-field"><input class="field" id="cd" type="number" inputmode="decimal" step="any" min="0" value="1.8"><span class="usfx">in</span></span>
+        </div>
+        <div class="fld">
+          <label for="pd2">Gear 2 Pitch Dia.</label>
+          <span class="unit-field ro"><input class="field" id="pd2" type="text" inputmode="none" readonly tabindex="-1"><span class="usfx">in</span></span>
+        </div>
+        <div class="fld">
+          <label for="od2">Gear 2 Outer Dia.</label>
+          <span class="unit-field ro"><input class="field" id="od2" type="text" inputmode="none" readonly tabindex="-1"><span class="usfx">in</span></span>
+        </div>
+      </div>
+
+      <span class="hint">Extra center is added to the center distance for clearance. If a gear's name lists a center distance, such as 10t with 12t center distance, enter that tooth count.</span>
+      </div>
+
+      <div id="trainBox" hidden>
+        <div class="trow">
+          <div class="fld w-sm">
+            <label for="gcount">Gears</label>
+            <span class="unit-field"><input class="field" id="gcount" type="number" inputmode="numeric" step="1" min="2" max="8" value="3"></span>
+          </div>
+          <div class="fld">
+            <span class="lbl">Layout</span>
+            <div class="toggle" role="radiogroup" aria-label="Gear train layout">
+              <input type="radio" name="layout" id="ly-s" value="simple" checked><label for="ly-s">In Line</label>
+              <input type="radio" name="layout" id="ly-c" value="compound"><label for="ly-c">Compound</label>
+            </div>
+          </div>
+        </div>
+        <div class="trow">
+          <div class="fld w-tgt">
+            <label for="tgt">Target Reduction</label>
+            <span class="unit-field"><input class="field" id="tgt" type="number" inputmode="decimal" step="any" min="0.01" placeholder="Optional"><span style="white-space:nowrap">: 1</span></span>
+          </div>
+          <button type="button" class="pill" id="solveBtn">Fit Teeth To Target</button>
+          <span class="hint" id="solveMsg"></span>
+        </div>
+        <div class="tgrid" id="tgrid"></div>
+        <span class="hint">Every mesh reverses the spin. In line: only the first and last gear set the reduction. Compound: gears 2 and 3, 4 and 5 share a shaft.</span>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="dr-h">
+    <div class="card">
+      <div class="card-head"><h2 id="dr-h">Top view</h2><span class="hd-tools"><span class="mini" role="radiogroup" aria-label="Which way the input gear spins"><input type="radio" name="indir" id="in-cw" value="cw" checked><label for="in-cw">Input CW</label><input type="radio" name="indir" id="in-ccw" value="ccw"><label for="in-ccw">Input CCW</label></span><button type="button" class="pill" id="spinBtn" aria-pressed="false">Pause</button></span></div>
+      <div class="draw-wrap">
+        <svg class="draw" id="draw" viewBox="0 0 640 220" role="img" aria-label="Top view of the gears with an arrow showing which way each one spins"></svg>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="out-h">
+    <div class="card">
+      <div class="card-head"><h2 id="out-h">Result</h2><button type="button" class="pill" id="copyBtn">Copy Results</button></div>
+      <textarea class="copybox" id="copyBox" rows="8" readonly hidden aria-label="Results text, select and copy"></textarea>
+      <div class="hero" id="status" aria-live="polite"></div>
+      <div class="card-sub" id="opts" hidden>
+        <h3 class="sub-h">Gear 2 options</h3>
+        <div class="tiles" id="optTiles"></div>
+        <span class="hint">Tap an option to use it as Gear 2.</span>
+      </div>
+      <div class="table-wrap"><table><tbody id="rows"></tbody></table></div>
+      <p class="note">Results are estimates for a standard full-depth spur gear mesh with both gears at the same pitch. Check the fit on your own design, and add extra center for the clearance your parts need.</p>
+    </div>
+  </section>
+
+
+  <section aria-labelledby="g-h" id="gearSec" hidden>
+    <div class="card">
+      <h2 id="g-h">WCP gears</h2>
+      <div id="gearBody" class="card-sub"></div>
+      <span class="hint">Gears listed here match the pitch and tooth counts above.</span>
+    </div>
+  </section>
+
+  <section aria-labelledby="sv-h">
+    <div class="card">
+      <div class="card-head"><h2 id="sv-h">Saved gears</h2><button type="button" class="rm" id="clearAll">Clear All</button></div>
+      <ul class="slist" id="savedList"></ul>
+      <a class="btn" id="addAll" href="https://wcproducts.com/cart/" target="_blank" rel="noopener"><svg viewBox="0 0 576 512" width="16" height="16" aria-hidden="true" fill="currentColor"><path d="M0 24C0 10.7 10.7 0 24 0H69.5c22 0 41.5 12.8 50.6 32h411c26.3 0 45.5 25 38.6 50.4l-41 152.3c-8.5 31.4-37 53.3-69.5 53.3H170.7l5.4 28.5c2.2 11.3 12.1 19.5 23.6 19.5H488c13.3 0 24 10.7 24 24s-10.7 24-24 24H199.7c-34.6 0-64.3-24.6-70.7-58.5L77.4 54.5c-.7-3.8-4-6.5-7.9-6.5H24C10.7 48 0 37.3 0 24zM128 464a48 48 0 1 1 96 0 48 48 0 1 1-96 0zm336-48a48 48 0 1 1 0 96 48 48 0 1 1 0-96z"/></svg>Add To Cart</a>
+      <span class="hint">Opens wcproducts.com in a new tab with every saved gear in your cart.</span>
+    </div>
+  </section>
+</main>
+</div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  function radio(name) { var e = document.querySelector('input[name="' + name + '"]:checked'); return e ? e.value : null; }
+  function esc(t) { return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+  var MM = 25.4;
+
+  // ---------- WCP gear catalog ----------
+  // One row per WCP gear: dp (20 or 32), teeth (as sold), ct (center distance tooth count, only when it differs from teeth),
+  // style, bore, pn (WCP part number). Rows are matched on ct, or on teeth when ct is not set. No prices are shown.
+  // Example row: { dp: 20, teeth: 10, ct: 12, style: "Steel", bore: "8mm SplineXS", pn: "WCP-XXXX" }
+  // Tooth counts, bores and center distance notes are from the WCP FRC Build System gears page (docs.wcproducts.com), read 2026-10-08.
+  // That page lists no part numbers, so rows show style and bore only until a PN is filled in below.
+  function evens(a, b) { var r = []; for (var i = a; i <= b; i += 2) r.push(i); return r; }
+  var CD_HEX38 = { 14: 16, 16: 18 };                          // 3/8" hex gears: 14T runs on 16T center distance, 16T on 18T
+  var CD_PINION = { 8: 10, 9: 10, 10: 12, 11: 12, 12: 14, 13: 14, 14: 16, 15: 16 }; // motor pinions, addendum modified
+  var GROUPS = [
+    { dp: 20, style: "Aluminum", bore: "3/8\" Hex", teeth: evens(14, 52), cd: CD_HEX38 },
+    { dp: 20, style: "Aluminum", bore: "1/2\" Hex", teeth: evens(18, 84) },
+    { dp: 20, style: "Steel", bore: "3/8\" Hex", teeth: evens(14, 24), cd: CD_HEX38 },
+    { dp: 20, style: "Steel", bore: "1/2\" Rounded Hex", teeth: [16] },
+    { dp: 20, style: "Steel", bore: "1/2\" Hex", teeth: [18, 20, 22, 24, 26, 28, 30, 32, 36, 38] },
+    { dp: 20, style: "Aluminum Pocketed", bore: "1/2\" Hex", teeth: evens(40, 84) },
+    { dp: 20, style: "Steel Pocketed", bore: "1/2\" Hex", teeth: [30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50, 52, 54, 58, 60] },
+    { dp: 20, style: "Steel Pocketed", bore: "3/8\" Hex", teeth: evens(26, 42) },
+    { dp: 20, style: "Steel Pocketed MotionX", bore: "1/2\" Hex", teeth: evens(52, 84) },
+    { dp: 20, style: "Steel Motor Pinion", bore: "8mm SplineXS", teeth: [8, 9, 10, 11, 12, 13, 14, 15, 16], cd: CD_PINION, plain: [12, 14, 16] },
+    { dp: 20, style: "Steel Motor Pinion", bore: "8mm Key", teeth: [9, 10, 11, 12, 13, 14, 15, 16], cd: CD_PINION, plain: [12, 14, 16] },
+    { dp: 20, style: "Steel Motor Pinion", bore: "Falcon Spline", teeth: [8, 9, 10, 11, 12, 13, 14], cd: CD_PINION, plain: [12, 14] },
+    { dp: 20, style: "Steel Motor Pinion", bore: "RS550 / RS775 / BAG", teeth: [6, 8], cd: { 6: 8 }, plain: [8] },
+    { dp: 32, style: "Steel Pocketed", bore: "8mm SplineXS", teeth: [15] },
+    { dp: 32, style: "Steel Pocketed", bore: "8mm Key", teeth: [20] },
+    { dp: 32, style: "Steel Pocketed", bore: "RS775", teeth: [12] },
+    { dp: 32, style: "Steel Pocketed", bore: "3/8\" Hex", teeth: [20, 40, 60, 80, 100] }
+  ];
+  // Rows read from the WCP cart exports: [part number, Shopify variant id, dp, teeth, center distance teeth (0 for none), style, bore, 1/2" wide].
+  // The variant id is what the cart link uses. Docs-only rows below have no part number or id yet, and they drop out once a cart row covers them.
+  var STORE = [
+    ["WCP-1005", 43982520811732, 10, 10, 0, "Steel", "8mm SplineXS", 0],
+    ["WCP-0700", 35666625331360, 20, 18, 0, "Aluminum", "1/2\" Hex", 0],
+    ["WCP-0701", 35666590204064, 20, 20, 0, "Aluminum", "1/2\" Hex", 0],
+    ["WCP-0702", 35666696011936, 20, 22, 0, "Aluminum", "1/2\" Hex", 0],
+    ["WCP-0703", 35666590269600, 20, 24, 0, "Aluminum", "1/2\" Hex", 0],
+    ["WCP-0704", 35666696405152, 20, 26, 0, "Aluminum", "1/2\" Hex", 0],
+    ["WCP-0705", 35666696732832, 20, 28, 0, "Aluminum", "1/2\" Hex", 0],
+    ["WCP-0706", 35666590302368, 20, 30, 0, "Aluminum", "1/2\" Hex", 0],
+    ["WCP-0707", 35666697224352, 20, 32, 0, "Aluminum", "1/2\" Hex", 0],
+    ["WCP-0708", 35666590597280, 20, 34, 0, "Aluminum", "1/2\" Hex", 0],
+    ["WCP-0709", 35666631622816, 20, 36, 0, "Aluminum", "1/2\" Hex", 0],
+    ["WCP-0710", 35666697257120, 20, 38, 0, "Aluminum", "1/2\" Hex", 0],
+    ["WCP-0711", 35666591252640, 20, 40, 0, "Aluminum", "1/2\" Hex", 0],
+    ["WCP-0712", 35666631983264, 20, 42, 0, "Aluminum", "1/2\" Hex", 0],
+    ["WCP-0713", 35666591449248, 20, 44, 0, "Aluminum", "1/2\" Hex", 0],
+    ["WCP-0714", 35666697289888, 20, 46, 0, "Aluminum", "1/2\" Hex", 0],
+    ["WCP-0188", 35666732548256, 20, 48, 0, "Aluminum", "1/2\" Hex", 0],
+    ["WCP-0715", 35666681036960, 20, 50, 0, "Aluminum", "1/2\" Hex", 0],
+    ["WCP-0716", 35666697388192, 20, 52, 0, "Aluminum", "1/2\" Hex", 0],
+    ["WCP-0717", 35666681069728, 20, 54, 0, "Aluminum", "1/2\" Hex", 0],
+    ["WCP-0718", 35666697552032, 20, 56, 0, "Aluminum", "1/2\" Hex", 0],
+    ["WCP-0719", 35666697879712, 20, 58, 0, "Aluminum", "1/2\" Hex", 0],
+    ["WCP-0720", 35666681200800, 20, 60, 0, "Aluminum", "1/2\" Hex", 0],
+    ["WCP-0721", 35666697912480, 20, 62, 0, "Aluminum", "1/2\" Hex", 0],
+    ["WCP-0722", 35666681331872, 20, 64, 0, "Aluminum", "1/2\" Hex", 0],
+    ["WCP-0171", 35666729468064, 20, 66, 0, "Aluminum", "1/2\" Hex", 0],
+    ["WCP-0723", 35666697945248, 20, 68, 0, "Aluminum", "1/2\" Hex", 0],
+    ["WCP-0172", 35666729500832, 20, 70, 0, "Aluminum", "1/2\" Hex", 0],
+    ["WCP-0724", 35666681397408, 20, 72, 0, "Aluminum", "1/2\" Hex", 0],
+    ["WCP-0725", 35666698174624, 20, 74, 0, "Aluminum", "1/2\" Hex", 0],
+    ["WCP-0726", 35666698338464, 20, 76, 0, "Aluminum", "1/2\" Hex", 0],
+    ["WCP-0727", 35666698371232, 20, 78, 0, "Aluminum", "1/2\" Hex", 0],
+    ["WCP-0728", 35666698436768, 20, 80, 0, "Aluminum", "1/2\" Hex", 0],
+    ["WCP-0729", 35666698469536, 20, 82, 0, "Aluminum", "1/2\" Hex", 0],
+    ["WCP-0730", 35666682085536, 20, 84, 0, "Aluminum", "1/2\" Hex", 0],
+    ["WCP-0116", 35666724028576, 20, 40, 0, "Aluminum Pocketed", "1/2\" Hex", 0],
+    ["WCP-0117", 35666724159648, 20, 42, 0, "Aluminum Pocketed", "1/2\" Hex", 0],
+    ["WCP-0118", 35666724225184, 20, 44, 0, "Aluminum Pocketed", "1/2\" Hex", 0],
+    ["WCP-0136", 35666725601440, 20, 46, 0, "Aluminum Pocketed", "1/2\" Hex", 0],
+    ["WCP-0137", 35666725929120, 20, 48, 0, "Aluminum Pocketed", "1/2\" Hex", 0],
+    ["WCP-0119", 35666724257952, 20, 50, 0, "Aluminum Pocketed", "1/2\" Hex", 0],
+    ["WCP-0138", 35666726125728, 20, 52, 0, "Aluminum Pocketed", "1/2\" Hex", 0],
+    ["WCP-0120", 35666724290720, 20, 54, 0, "Aluminum Pocketed", "1/2\" Hex", 0],
+    ["WCP-0139", 35666726256800, 20, 56, 0, "Aluminum Pocketed", "1/2\" Hex", 0],
+    ["WCP-0140", 35666726289568, 20, 58, 0, "Aluminum Pocketed", "1/2\" Hex", 0],
+    ["WCP-0121", 35666724323488, 20, 60, 0, "Aluminum Pocketed", "1/2\" Hex", 0],
+    ["WCP-0141", 35666726486176, 20, 62, 0, "Aluminum Pocketed", "1/2\" Hex", 0],
+    ["WCP-0122", 35666724389024, 20, 64, 0, "Aluminum Pocketed", "1/2\" Hex", 0],
+    ["WCP-0142", 35666726715552, 20, 66, 0, "Aluminum Pocketed", "1/2\" Hex", 0],
+    ["WCP-0143", 35666726748320, 20, 68, 0, "Aluminum Pocketed", "1/2\" Hex", 0],
+    ["WCP-0144", 35666726781088, 20, 70, 0, "Aluminum Pocketed", "1/2\" Hex", 0],
+    ["WCP-0123", 35666724683936, 20, 72, 0, "Aluminum Pocketed", "1/2\" Hex", 0],
+    ["WCP-0145", 35666726813856, 20, 74, 0, "Aluminum Pocketed", "1/2\" Hex", 0],
+    ["WCP-0146", 35666726846624, 20, 76, 0, "Aluminum Pocketed", "1/2\" Hex", 0],
+    ["WCP-0147", 35666726879392, 20, 78, 0, "Aluminum Pocketed", "1/2\" Hex", 0],
+    ["WCP-0148", 35666726944928, 20, 80, 0, "Aluminum Pocketed", "1/2\" Hex", 0],
+    ["WCP-0149", 35666727239840, 20, 82, 0, "Aluminum Pocketed", "1/2\" Hex", 0],
+    ["WCP-0124", 35666725142688, 20, 84, 0, "Aluminum Pocketed", "1/2\" Hex", 0],
+    ["WCP-0733", 35666695913632, 20, 18, 0, "Steel", "1/2\" Hex", 0],
+    ["WCP-0734", 35666695979168, 20, 20, 0, "Steel", "1/2\" Hex", 0],
+    ["WCP-0735", 35666696175776, 20, 22, 0, "Steel", "1/2\" Hex", 0],
+    ["WCP-0736", 35666696372384, 20, 24, 0, "Steel", "1/2\" Hex", 0],
+    ["WCP-0737", 35666696470688, 20, 26, 0, "Steel", "1/2\" Hex", 0],
+    ["WCP-0738", 35666697060512, 20, 28, 0, "Steel", "1/2\" Hex", 0],
+    ["WCP-0175", 35666729599136, 20, 36, 0, "Steel", "1/2\" Hex", 0],
+    ["WCP-0176", 35666730156192, 20, 38, 0, "Steel", "1/2\" Hex", 0],
+    ["WCP-0553", 43542761177300, 20, 30, 0, "Steel Pocketed", "1/2\" Hex", 0],
+    ["WCP-0554", 43542763012308, 20, 32, 0, "Steel Pocketed", "1/2\" Hex", 0],
+    ["WCP-0542", 43331850109140, 20, 34, 0, "Steel Pocketed", "1/2\" Hex", 0],
+    ["WCP-0555", 43542766485716, 20, 36, 0, "Steel Pocketed", "1/2\" Hex", 0],
+    ["WCP-0556", 43542768779476, 20, 38, 0, "Steel Pocketed", "1/2\" Hex", 0],
+    ["WCP-0177", 35666730811552, 20, 40, 0, "Steel Pocketed", "1/2\" Hex", 0],
+    ["WCP-0178", 35666730844320, 20, 42, 0, "Steel Pocketed", "1/2\" Hex", 0],
+    ["WCP-0179", 35666731073696, 20, 44, 0, "Steel Pocketed", "1/2\" Hex", 0],
+    ["WCP-0180", 35666731401376, 20, 46, 0, "Steel Pocketed", "1/2\" Hex", 0],
+    ["WCP-0181", 35666731434144, 20, 48, 0, "Steel Pocketed", "1/2\" Hex", 0],
+    ["WCP-0182", 35666731466912, 20, 50, 0, "Steel Pocketed", "1/2\" Hex", 0],
+    ["WCP-0183", 35666731663520, 20, 52, 0, "Steel Pocketed", "1/2\" Hex", 0],
+    ["WCP-0186", 35666732122272, 20, 58, 0, "Steel Pocketed", "1/2\" Hex", 0],
+    ["WCP-1143", 45973185593556, 20, 52, 0, "Steel Pocketed MotionX", "1/2\" Hex", 0],
+    ["WCP-1144", 45973179760852, 20, 54, 0, "Steel Pocketed MotionX", "1/2\" Hex", 0],
+    ["WCP-1145", 45826221506772, 20, 56, 0, "Steel Pocketed MotionX", "1/2\" Hex", 0],
+    ["WCP-1146", 43959645962452, 20, 58, 0, "Steel Pocketed MotionX", "1/2\" Hex", 0],
+    ["WCP-1147", 43959649730772, 20, 60, 0, "Steel Pocketed MotionX", "1/2\" Hex", 0],
+    ["WCP-1148", 43959660216532, 20, 62, 0, "Steel Pocketed MotionX", "1/2\" Hex", 0],
+    ["WCP-1149", 43959664443604, 20, 64, 0, "Steel Pocketed MotionX", "1/2\" Hex", 0],
+    ["WCP-1430", 44259117138132, 20, 66, 0, "Steel Pocketed MotionX", "1/2\" Hex", 0],
+    ["WCP-1431", 44259126411476, 20, 68, 0, "Steel Pocketed MotionX", "1/2\" Hex", 0],
+    ["WCP-1432", 44259130245332, 20, 70, 0, "Steel Pocketed MotionX", "1/2\" Hex", 0],
+    ["WCP-1433", 44259131752660, 20, 72, 0, "Steel Pocketed MotionX", "1/2\" Hex", 0],
+    ["WCP-1434", 44259132473556, 20, 74, 0, "Steel Pocketed MotionX", "1/2\" Hex", 0],
+    ["WCP-1435", 44259133587668, 20, 76, 0, "Steel Pocketed MotionX", "1/2\" Hex", 0],
+    ["WCP-1436", 44259137421524, 20, 78, 0, "Steel Pocketed MotionX", "1/2\" Hex", 0],
+    ["WCP-1437", 44259164946644, 20, 80, 0, "Steel Pocketed MotionX", "1/2\" Hex", 0],
+    ["WCP-1438", 44259171991764, 20, 82, 0, "Steel Pocketed MotionX", "1/2\" Hex", 0],
+    ["WCP-1439", 44259185230036, 20, 84, 0, "Steel Pocketed MotionX", "1/2\" Hex", 0],
+    ["WCP-0290", 40196648566944, 20, 16, 0, "Steel", "1/2\" Rounded Hex", 0],
+    ["WCP-0680", 35666590105760, 20, 14, 0, "Aluminum", "3/8\" Hex", 0],
+    ["WCP-1718", 45604915970260, 20, 14, 16, "Aluminum", "3/8\" Hex", 0],
+    ["WCP-0681", 35666694766752, 20, 16, 0, "Aluminum", "3/8\" Hex", 0],
+    ["WCP-1720", 45604916265172, 20, 16, 18, "Aluminum", "3/8\" Hex", 0],
+    ["WCP-0682", 35666624282784, 20, 18, 0, "Aluminum", "3/8\" Hex", 0],
+    ["WCP-0683", 35666590171296, 20, 20, 0, "Aluminum", "3/8\" Hex", 0],
+    ["WCP-0684", 35666694865056, 20, 22, 0, "Aluminum", "3/8\" Hex", 0],
+    ["WCP-0685", 35666590236832, 20, 24, 0, "Aluminum", "3/8\" Hex", 0],
+    ["WCP-0686", 35666694930592, 20, 26, 0, "Aluminum", "3/8\" Hex", 0],
+    ["WCP-0687", 35666695094432, 20, 28, 0, "Aluminum", "3/8\" Hex", 0],
+    ["WCP-0688", 35666627068064, 20, 30, 0, "Aluminum", "3/8\" Hex", 0],
+    ["WCP-0689", 35666695159968, 20, 32, 0, "Aluminum", "3/8\" Hex", 0],
+    ["WCP-0690", 35666628903072, 20, 34, 0, "Aluminum", "3/8\" Hex", 0],
+    ["WCP-0691", 35666630574240, 20, 36, 0, "Aluminum", "3/8\" Hex", 0],
+    ["WCP-0692", 35666695487648, 20, 38, 0, "Aluminum", "3/8\" Hex", 0],
+    ["WCP-0693", 35666591056032, 20, 40, 0, "Aluminum", "3/8\" Hex", 0],
+    ["WCP-0694", 35666631917728, 20, 42, 0, "Aluminum", "3/8\" Hex", 0],
+    ["WCP-0695", 35666695749792, 20, 44, 0, "Aluminum", "3/8\" Hex", 0],
+    ["WCP-0696", 35666695848096, 20, 46, 0, "Aluminum", "3/8\" Hex", 0],
+    ["WCP-0114", 35666723963040, 20, 48, 0, "Aluminum", "3/8\" Hex", 0],
+    ["WCP-0698", 35666680938656, 20, 50, 0, "Aluminum", "3/8\" Hex", 0],
+    ["WCP-0699", 35666695880864, 20, 52, 0, "Aluminum", "3/8\" Hex", 0],
+    ["WCP-0731", 35666609668256, 20, 14, 0, "Steel", "3/8\" Hex", 0],
+    ["WCP-1717", 45604915871956, 20, 14, 16, "Steel", "3/8\" Hex", 0],
+    ["WCP-0732", 35666694799520, 20, 16, 0, "Steel", "3/8\" Hex", 0],
+    ["WCP-1719", 45604916068564, 20, 16, 18, "Steel", "3/8\" Hex", 0],
+    ["WCP-0432", 43331767468244, 20, 18, 0, "Steel", "3/8\" Hex", 0],
+    ["WCP-0433", 43331776774356, 20, 20, 0, "Steel", "3/8\" Hex", 0],
+    ["WCP-0434", 43331780837588, 20, 22, 0, "Steel", "3/8\" Hex", 0],
+    ["WCP-0538", 43331793223892, 20, 24, 0, "Steel", "3/8\" Hex", 0],
+    ["WCP-0539", 43331807772884, 20, 26, 0, "Steel Pocketed", "3/8\" Hex", 0],
+    ["WCP-0546", 43542703734996, 20, 28, 0, "Steel Pocketed", "3/8\" Hex", 0],
+    ["WCP-0547", 43542719267028, 20, 30, 0, "Steel Pocketed", "3/8\" Hex", 0],
+    ["WCP-0540", 43331820126420, 20, 32, 0, "Steel Pocketed", "3/8\" Hex", 0],
+    ["WCP-0548", 43542720479444, 20, 34, 0, "Steel Pocketed", "3/8\" Hex", 0],
+    ["WCP-0549", 43542744334548, 20, 36, 0, "Steel Pocketed", "3/8\" Hex", 0],
+    ["WCP-0550", 43542745841876, 20, 38, 0, "Steel Pocketed", "3/8\" Hex", 0],
+    ["WCP-0551", 43542750134484, 20, 40, 0, "Steel Pocketed", "3/8\" Hex", 0],
+    ["WCP-0541", 43331821535444, 20, 42, 0, "Steel Pocketed", "3/8\" Hex", 0],
+    ["WCP-1006", 43975138640084, 20, 8, 10, "Steel Motor Pinion", "8mm SplineXS", 0],
+    ["WCP-1007", 43975139426516, 20, 9, 10, "Steel Motor Pinion", "8mm SplineXS", 0],
+    ["WCP-1008", 43975140770004, 20, 10, 12, "Steel Motor Pinion", "8mm SplineXS", 0],
+    ["WCP-1009", 43975175700692, 20, 11, 12, "Steel Motor Pinion", "8mm SplineXS", 0],
+    ["WCP-1010", 43975179600084, 20, 12, 0, "Steel Motor Pinion", "8mm SplineXS", 0],
+    ["WCP-1011", 43975181304020, 20, 12, 14, "Steel Motor Pinion", "8mm SplineXS", 0],
+    ["WCP-1012", 43975197163732, 20, 13, 14, "Steel Motor Pinion", "8mm SplineXS", 0],
+    ["WCP-1013", 43975200899284, 20, 14, 0, "Steel Motor Pinion", "8mm SplineXS", 0],
+    ["WCP-1014", 43975203061972, 20, 14, 16, "Steel Motor Pinion", "8mm SplineXS", 0],
+    ["WCP-1015", 43975206371540, 20, 15, 16, "Steel Motor Pinion", "8mm SplineXS", 0],
+    ["WCP-1016", 43975207125204, 20, 16, 0, "Steel Motor Pinion", "8mm SplineXS", 0],
+    ["WCP-1345", 48042691657940, 20, 8, 10, "Steel Motor Pinion", "8mm SplineXS", 1],
+    ["WCP-1346", 48042691690708, 20, 9, 10, "Steel Motor Pinion", "8mm SplineXS", 1],
+    ["WCP-1347", 48042691723476, 20, 10, 12, "Steel Motor Pinion", "8mm SplineXS", 1],
+    ["WCP-1348", 48042691756244, 20, 11, 12, "Steel Motor Pinion", "8mm SplineXS", 1],
+    ["WCP-1350", 48042691821780, 20, 12, 0, "Steel Motor Pinion", "8mm SplineXS", 1],
+    ["WCP-1349", 48042691789012, 20, 12, 14, "Steel Motor Pinion", "8mm SplineXS", 1],
+    ["WCP-1351", 48042691854548, 20, 13, 14, "Steel Motor Pinion", "8mm SplineXS", 1],
+    ["WCP-1353", 48042692182228, 20, 14, 0, "Steel Motor Pinion", "8mm SplineXS", 1],
+    ["WCP-1352", 48042691887316, 20, 14, 16, "Steel Motor Pinion", "8mm SplineXS", 1],
+    ["WCP-1382", 48042692247764, 20, 15, 16, "Steel Motor Pinion", "8mm SplineXS", 1],
+    ["WCP-1383", 48042692280532, 20, 16, 0, "Steel Motor Pinion", "8mm SplineXS", 1],
+    ["WCP-1384", 48042692313300, 20, 18, 0, "Steel Motor Pinion", "8mm SplineXS", 1],
+    ["WCP-1385", 48042692346068, 20, 20, 0, "Steel Motor Pinion", "8mm SplineXS", 1],
+    ["WCP-1386", 48042692378836, 20, 22, 0, "Steel Motor Pinion", "8mm SplineXS", 1],
+    ["WCP-1387", 48042692411604, 20, 24, 0, "Steel Motor Pinion", "8mm SplineXS", 1],
+    ["WCP-1464", 44056848629972, 32, 15, 0, "Steel", "8mm SplineXS", 0]
+  ];
+  var GEARS = [], seen = {};
+  function gk(dp, style, bore, teeth, ct, wide) { return [dp, String(style).split(" ")[0], bore, teeth, ct || 0, wide ? 1 : 0].join("|"); }
+  STORE.forEach(function (r) {
+    GEARS.push({ pn: r[0], id: r[1], dp: r[2], teeth: r[3], ct: r[4] || null, style: r[5], bore: r[6], wide: !!r[7] });
+    seen[gk(r[2], r[5], r[6], r[3], r[4], r[7])] = true;
+  });
+  function addDocs(gr, t, ct) {
+    if (seen[gk(gr.dp, gr.style, gr.bore, t, ct, 0)]) return;
+    GEARS.push({ pn: null, id: null, dp: gr.dp, teeth: t, ct: ct || null, style: gr.style, bore: gr.bore, wide: false });
+  }
+  GROUPS.forEach(function (gr) {
+    gr.teeth.forEach(function (t) {
+      var ct = gr.cd && gr.cd[t];
+      var plainToo = gr.plain && gr.plain.indexOf(t) >= 0;
+      // a pinion tooth count that has both a plain gear and a center distance version gets a row for each
+      if (ct) addDocs(gr, t, ct);
+      if (!ct || plainToo) addDocs(gr, t, 0);
+    });
+  });
+  function gearUrl(g) { return "https://wcproducts.com/products/" + String(g.pn).toLowerCase(); }
+  // Product name in WCP's own wording, for the saved list.
+  function gearName(g) {
+    var st = String(g.style);
+    return g.teeth + "t" + (g.wide ? " x 1/2\" Wide" : "") + " " + (/Pocketed/.test(st) ? "Pocketed " : "") + st.split(" ")[0] + " Spur Gear" + (/MotionX/.test(st) ? " with MotionX" : "") + " (" + g.dp + " DP, " + (g.ct ? g.ct + "t CD, " : "") + g.bore + " Bore)";
+  }
+
+  // ---------- helpers ----------
+  function unit() { return radio("unit") === "mm" ? "mm" : "in"; }
+  function toIn(x) { return unit() === "mm" ? x / MM : x; }
+  function fmt(inches) { return unit() === "mm" ? (inches * MM).toFixed(2) + " mm" : inches.toFixed(3) + " in"; }
+  function fmtOther(inches) { return unit() === "mm" ? inches.toFixed(3) + " in" : (inches * MM).toFixed(2) + " mm"; }
+  function num(id) { var v = parseFloat($(id).value); return isFinite(v) ? v : NaN; }
+  function validTeeth(n) { return isFinite(n) && n >= 6 && n <= 300 && Math.floor(n) === n; }
+
+  // ---------- drawing ----------
+  // Tooth profile per pitch. Pressure angles, tooth thinning, root depth and root fillet are fitted to WCP's own part drawings
+  // (20 DP aluminum gears and steel SplineXS pinions, 32 DP hex bore gears). 10 DP has no drawing, so it uses a plain 20 degree involute
+  // with the 32 DP root shape. Lengths are in units of 1/DP: pa pressure angle (deg), delta tooth thinning per side (in),
+  // ded root depth, yj/xr/g1/g2 describe the fillet between the flank and the root.
+  var PROFILE = {
+    10: { pa: 20, delta: 0, ded: 1.25, yj: -0.349, xr: 1.464, g1: 0.386, g2: 0.508, src: "a standard 20\u00b0 involute (WCP has no 10 DP drawing)" },
+    20: { pa: 14.5, delta: 0.0015, ded: 1.255, yj: -0.234, xr: 1.477, g1: 0.476, g2: 0.777, src: "WCP's 20 DP gear drawings" },
+    32: { pa: 20, delta: 0.001, ded: 1.28, yj: -0.349, xr: 1.464, g1: 0.386, g2: 0.508, src: "WCP's 32 DP gear drawing" }
+  };
+  function prof(dp) { return PROFILE[dp] || PROFILE[20]; }
+  function pressure(dp) { return prof(dp).pa; }
+  function inv(a) { return Math.tan(a) - a; }
+  // Right half of one tooth from the tip down to the middle of the gap, as [x, y] pairs: x is the arc length from the tooth center at
+  // the pitch circle times DP, y is the height above the pitch circle times DP.
+  function halfTooth(n, dp) {
+    var q = prof(dp), PA = q.pa * Math.PI / 180, rp = n / (2 * dp), rb = rp * Math.cos(PA), ro = rp + 1 / dp, k = rp * dp;
+    var steps = n > 80 ? 5 : 9, bsteps = n > 80 ? 6 : 12, pts = [], j;
+    function th(r) { return Math.max(0.0005, Math.PI / (2 * n) + inv(PA) - inv(Math.acos(Math.min(1, rb / r))) - q.delta / rp); }
+    var yBase = (rb - rp) * dp, yJ = Math.max(yBase, q.yj), rJ = rp + yJ / dp;
+    for (j = 0; j <= steps; j++) { var r = ro + (rJ - ro) * j / steps; pts.push([th(r) * k, (r - rp) * dp]); }
+    var p0 = pts[pts.length - 1], pr = pts[pts.length - 2];
+    var tx = p0[0] - pr[0], ty = p0[1] - pr[1], tl = Math.sqrt(tx * tx + ty * ty) || 1; tx /= tl; ty /= tl;
+    var p1 = [p0[0] + q.g1 * tx, p0[1] + q.g1 * ty], p3 = [q.xr, -q.ded], p2 = [q.xr - q.g2, -q.ded];
+    for (j = 1; j <= bsteps; j++) {
+      var t = j / bsteps, u = 1 - t;
+      pts.push([u * u * u * p0[0] + 3 * u * u * t * p1[0] + 3 * u * t * t * p2[0] + t * t * t * p3[0],
+                u * u * u * p0[1] + 3 * u * u * t * p1[1] + 3 * u * t * t * p2[1] + t * t * t * p3[1]]);
+    }
+    pts.push([Math.PI / 2, -q.ded]);
+    return pts;
+  }
+  // Full gear outline in absolute SVG coordinates (s = pixels per inch).
+  function gearPath(cx, cy, n, dp, s, phase) {
+    var rp = n / (2 * dp), k = rp * dp, pitch = 2 * Math.PI / n, h = halfTooth(n, dp), d = "", i, t;
+    function P(pt, side, tc) {
+      var ang = tc + side * pt[0] / k, r = rp + pt[1] / dp;
+      return (cx + r * s * Math.cos(ang)).toFixed(2) + " " + (cy + r * s * Math.sin(ang)).toFixed(2);
+    }
+    var ro = (rp + 1 / dp) * s, topArc = "A" + ro.toFixed(2) + " " + ro.toFixed(2) + " 0 0 1 ";
+    for (var m = 0; m < n; m++) {
+      t = phase + m * pitch;
+      for (i = h.length - 1; i >= 0; i--) d += (d ? "L" : "M") + P(h[i], -1, t);
+      d += topArc + P(h[0], 1, t);
+      for (i = 1; i < h.length; i++) d += "L" + P(h[i], 1, t);
+    }
+    return d + "Z";
+  }
+
+  // Draws any train of spur gears in a row. G[i] = { n (printed teeth), e (teeth the geometry uses), shaft, sign (+1 clockwise, -1 counterclockwise), w (deg per second) }.
+  // shaftX[s] is the position of shaft s along the row in inches. Gears on the same shaft sit on top of each other (compound).
+  var ARROW_COL = ["#0075c9", "#005a9c"];
+  function drawTrain(G, shaftX, dp) {
+    var svg = $("draw");
+    // the same tooth count is drawn at the same pixel size on every pitch (96 px per inch at 20 DP, so 48 at 10 DP and 153.6 at 32 DP);
+    // nothing is shrunk to fit, a big train scrolls sideways instead
+    var s = 96 * dp / 20, pad = 32, i, minX = 1e9, maxX = -1e9, maxRo = 0;
+    G.forEach(function (g) {
+      g.rp = g.e / (2 * dp); g.ro = g.rp + 1 / dp; g.ra = g.ro * s + 9;
+      var x = shaftX[g.shaft];
+      minX = Math.min(minX, x - g.ro); maxX = Math.max(maxX, x + g.ro); maxRo = Math.max(maxRo, g.ro);
+    });
+    var W = maxX - minX, vw = Math.max(440, Math.ceil(W * s + 2 * pad)), drawH = 2 * maxRo * s;
+    // gear names sit above each gear's direction arrow; names on the same shaft are stacked so they never overlap
+    var placed = [], minOff = 0;
+    G.forEach(function (g, k) {
+      var off = -g.ra - 10;
+      for (var t = 0; t < placed.length; t++) {
+        var q = placed[t];
+        if (Math.abs(q.cx - shaftX[g.shaft]) < 0.01 && Math.abs(q.off - off) < 16) { off = q.off - 16; t = -1; }
+      }
+      placed.push({ cx: shaftX[g.shaft], off: off }); g.lab = off; minOff = Math.min(minOff, off);
+    });
+    var topPad = Math.max(10, Math.ceil(16 - maxRo * s - minOff)), cy = topPad + drawH / 2, vh = Math.round(topPad + drawH + 64);
+    var x0 = (vw - W * s) / 2 - minX * s;
+    // starting phase of every gear so each mesh begins with a tooth of one gear in the gap of the next
+    G.forEach(function (g, k) {
+      g.cx = x0 + shaftX[g.shaft] * s;
+      if (k === 0 || G[k - 1].shaft === g.shaft) { g.a = 0; return; }
+      var p = G[k - 1], P = 2 * Math.PI / g.e;
+      g.a = Math.PI - (p.rp * p.a - Math.PI / dp / 2) / g.rp;
+      g.a = ((g.a % P) + P) % P;
+    });
+    var hexPx = 0.25 / Math.cos(Math.PI / 6) * 96; // the 1/2" hex bore is drawn at one fixed pixel size on every pitch
+    function bore(cx, rootR, color) {
+      if (hexPx >= rootR * s * 0.92) return '<circle cx="' + cx.toFixed(2) + '" cy="' + cy.toFixed(2) + '" r="3" fill="' + color + '"/>';
+      var d = "";
+      for (var k = 0; k < 6; k++) {
+        var t = Math.PI / 6 + k * Math.PI / 3;
+        d += (k ? "L" : "M") + (cx + hexPx * Math.cos(t)).toFixed(2) + " " + (cy + hexPx * Math.sin(t)).toFixed(2);
+      }
+      return '<path d="' + d + 'Z" fill="#e8f2fa" stroke="' + color + '" stroke-width="1.5" stroke-linejoin="round"/><circle cx="' + cx.toFixed(2) + '" cy="' + cy.toFixed(2) + '" r="2" fill="' + color + '"/>';
+    }
+    var out = "", order = G.map(function (g, k) { return k; }).sort(function (a, b) { return G[b].ro - G[a].ro || a - b; });
+    order.forEach(function (k) {
+      var g = G[k], col = ARROW_COL[k % 2];
+      out += '<g id="gear' + k + '"><path d="' + gearPath(g.cx, cy, g.e, dp, s, g.a) + '" fill="' + (k % 2 ? "#ffffff" : "#e3f0fa") + '" stroke="' + col + '" stroke-width="1.5" stroke-linejoin="round"/>' + bore(g.cx, g.rp - 1.25 / dp, col) + '</g>';
+    });
+    G.forEach(function (g, k) {
+      var col = ARROW_COL[k % 2], cxs = g.cx.toFixed(2);
+      out += '<circle cx="' + cxs + '" cy="' + cy.toFixed(2) + '" r="' + (g.rp * s).toFixed(2) + '" fill="none" stroke="#8cc2ea" stroke-width="1" stroke-dasharray="4 3"/>';
+      // spin direction arrow arched over the top of the gear (clockwise or counterclockwise in this view)
+      var a0 = -130 * Math.PI / 180, a1 = -50 * Math.PI / 180, ra = g.ra;
+      var sx = g.cx + ra * Math.cos(a0), sy = cy + ra * Math.sin(a0), ex = g.cx + ra * Math.cos(a1), ey = cy + ra * Math.sin(a1);
+      var cw = g.sign > 0, ang = cw ? a1 : a0, px = cw ? ex : sx, py = cw ? ey : sy;
+      var dx = cw ? -Math.sin(ang) : Math.sin(ang), dy2 = cw ? Math.cos(ang) : -Math.cos(ang);
+      var nx = Math.cos(ang), ny = Math.sin(ang), tip = [px + dx * 8, py + dy2 * 8];
+      var b1 = [px + nx * 4.5, py + ny * 4.5], b2 = [px - nx * 4.5, py - ny * 4.5];
+      out += '<path d="M' + sx.toFixed(2) + " " + sy.toFixed(2) + "A" + ra.toFixed(2) + " " + ra.toFixed(2) + ' 0 0 1 ' + ex.toFixed(2) + " " + ey.toFixed(2) + '" fill="none" stroke="' + col + '" stroke-width="2" stroke-linecap="round"/>';
+      out += '<path d="M' + b1[0].toFixed(2) + " " + b1[1].toFixed(2) + "L" + tip[0].toFixed(2) + " " + tip[1].toFixed(2) + "L" + b2[0].toFixed(2) + " " + b2[1].toFixed(2) + 'Z" fill="' + col + '"/>';
+      out += '<text x="' + cxs + '" y="' + (cy + g.lab).toFixed(2) + '" text-anchor="middle" font-size="13" font-weight="700" fill="#005a9c">Gear ' + (k + 1) + ' &middot; ' + g.n + 'T</text>';
+    });
+    // center to center dimension for every mesh
+    var dyl = cy + maxRo * s + 18, meshes = 0;
+    G.forEach(function (g, k) {
+      if (k === 0 || G[k - 1].shaft === g.shaft) return;
+      var p = G[k - 1]; meshes++;
+      var xa = p.cx, xb = g.cx, dist = shaftX[g.shaft] - shaftX[p.shaft];
+      out += '<line x1="' + xa.toFixed(2) + '" y1="' + (cy + Math.max(4, hexPx + 3)) + '" x2="' + xa.toFixed(2) + '" y2="' + (dyl + 5) + '" stroke="#8cc2ea" stroke-width="1"/>';
+      out += '<line x1="' + xb.toFixed(2) + '" y1="' + (cy + Math.max(4, hexPx + 3)) + '" x2="' + xb.toFixed(2) + '" y2="' + (dyl + 5) + '" stroke="#8cc2ea" stroke-width="1"/>';
+      out += '<line x1="' + xa.toFixed(2) + '" y1="' + dyl + '" x2="' + xb.toFixed(2) + '" y2="' + dyl + '" stroke="#0075c9" stroke-width="1.5"/>';
+      out += '<text x="' + ((xa + xb) / 2).toFixed(2) + '" y="' + (dyl + 17) + '" text-anchor="middle" font-size="12.5" font-weight="500" fill="#0f2a40">' + esc(fmt(dist)) + (G.length === 2 ? " center to center" : "") + '</text>';
+    });
+    svg.setAttribute("viewBox", "0 0 " + vw + " " + vh);
+    svg.setAttribute("width", vw);
+    svg.setAttribute("height", vh);
+    svg.innerHTML = out;
+    anim = { gs: G.map(function (g, k) { return { id: "gear" + k, cx: g.cx.toFixed(2), sign: g.sign, w: g.w }; }), cy: cy.toFixed(2) };
+    spin();
+  }
+  // two gears: the first spins the way the Top view toggle says, the second the other way, both at the same tooth rate
+  function drawGears(n1, n2, e1, e2, dp, spacing) {
+    var d = radio("indir") === "ccw" ? -1 : 1;
+    drawTrain([{ n: n1, e: e1, shaft: 0, sign: d, w: 1080 / e1 }, { n: n2, e: e2, shaft: 1, sign: -d, w: 1080 / e2 }], [0, spacing], dp);
+  }
+
+  function noteFor(dp, extra) { return "A given tooth count is drawn at the same size on every pitch. " + extra + dp + " DP, " + prof(dp).pa + "° pressure angle, tooth profile from " + prof(dp).src + ". Arrows show which way each gear spins in this top view. Dashed circles are the pitch circles and the bores are 1/2 in hex, drawn at one fixed size."; }
+  var anim = null, spinT = 0, spinOn = true, lastTs = 0;
+  function spin() {
+    if (!anim) return;
+    anim.gs.forEach(function (g) {
+      var el = $(g.id);
+      if (el) el.setAttribute("transform", "rotate(" + (g.sign * spinT * g.w).toFixed(3) + " " + g.cx + " " + anim.cy + ")");
+    });
+  }
+  function frame(ts) {
+    window.requestAnimationFrame(frame);
+    var dt = lastTs ? Math.min(0.1, (ts - lastTs) / 1000) : 0;
+    lastTs = ts;
+    if (anim && spinOn && dt) { spinT += dt; spin(); }
+  }
+
+  // ---------- result ----------
+  var lastCopy = "";
+
+  function setHero(bad, lab, big, sub) {
+    var h = $("status");
+    h.className = "hero" + (bad ? " bad" : "");
+    h.innerHTML = '<span class="lab">' + esc(lab) + '</span>' + (big ? '<span class="big">' + esc(big) + '</span>' : "") + '<span class="sub">' + esc(sub) + '</span>';
+  }
+  function row(label, value, head) { return '<tr' + (head ? ' class="head"' : '') + '><td>' + esc(label) + '</td><td class="num">' + esc(value) + '</td></tr>'; }
+
+  // Per gear, two dropdowns (bore and material/type) narrow the list to the parts that match; choices are kept while you edit.
+  var wf = {}, regear = null;
+  function styOf(g) { return (g.style || "") + (g.wide ? ', 1/2" wide' : ""); }
+  function uniq(a) { var o = []; a.forEach(function (x) { if (x && o.indexOf(x) < 0) o.push(x); }); return o; }
+  // One toggle row (bore or material) for a gear; the picked buttons decide which single gear is listed.
+  function tog(label, key, cur, opts, title, ok) {
+    var slug = label.replace(/[^A-Za-z0-9]+/g, "") + key;
+    return '<div class="gopt"><span class="gl">' + title + '</span><div class="toggle" role="radiogroup" aria-label="' + esc(label + " " + title) + '">' + opts.map(function (o, i) {
+      var id = "wf-" + slug + i;
+      return '<input type="radio" name="wf-' + slug + '" id="' + id + '" value="' + esc(o) + '" data-wf="' + esc(label) + '" data-k="' + key + '"' + (o === cur ? " checked" : "") + (ok && ok.indexOf(o) < 0 ? " disabled" : "") + '><label for="' + id + '">' + esc(o) + '</label>';
+    }).join("") + '</div></div>';
+  }
+  function gearTable(n, dp, label, byActual) {
+    var list = GEARS.filter(function (g) { return g.dp === dp && (byActual ? g.teeth : (g.ct || g.teeth)) === n; });
+    var f = wf[label] || (wf[label] = { bore: "", type: "" });
+    var bores = uniq(list.map(function (g) { return g.bore; }));
+    if (bores.indexOf(f.bore) < 0) f.bore = bores[0] || "";
+    var allTypes = uniq(list.map(styOf));
+    var types = uniq(list.filter(function (g) { return g.bore === f.bore; }).map(styOf));
+    if (types.indexOf(f.type) < 0) f.type = types[0] || "";
+    var shown = list.filter(function (g) { return g.bore === f.bore && styOf(g) === f.type; });
+    var out = '<div class="gtop"><span class="gt">' + esc(label) + ' &middot; ' + n + ' teeth</span></div>';
+    if (!list.length) return out + '<div class="gnone">No WCP gear listed at this tooth count.</div>';
+    out += '<div class="gsels">' + tog(label, "bore", f.bore, bores, "Bore") + tog(label, "type", f.type, allTypes, "Material", types) + '</div>';
+    shown.forEach(function (g) {
+      var sty = styOf(g), meta = [sty, g.bore, g.ct ? g.teeth + "t (" + g.ct + "t center)" : ""].filter(Boolean).join(" \u00b7 ");
+      var name = g.pn ? '<a class="buy" href="' + esc(gearUrl(g)) + '" target="_blank" rel="noopener">' + esc(g.pn) + '</a>' : esc(g.teeth + "t");
+      var act = g.id ? '<button type="button" class="pill" data-save="' + esc(g.pn) + '">Save</button>' : "";
+      out += '<div class="gpart"><span><span class="gname">' + name + '</span><span class="gmeta">' + esc(meta) + '</span></span>' + act + '</div>';
+    });
+    return out;
+  }
+  function gearBox(n, dp, label, byActual) { return '<div class="gbox">' + gearTable(n, dp, label, byActual) + "</div>"; }
+  function renderGears(n1, n2, dp, byActual) {
+    var sec = $("gearSec");
+    if (!GEARS.length || !n1 || !n2) { sec.hidden = true; return; }
+    sec.hidden = false;
+    regear = function () { renderGears(n1, n2, dp, byActual); };
+    $("gearBody").innerHTML = gearBox(n1, dp, "Gear 1", byActual) + gearBox(n2, dp, "Gear 2", byActual);
+  }
+
+  // Fills each gear's pitch and outer diameter from the tooth counts the geometry uses.
+  function fill(e1, e2, dp) {
+    var d = unit() === "mm" ? 2 : 3, k = unit() === "mm" ? MM : 1;
+    var v = { pd1: e1 / dp * k, od1: (e1 + 2) / dp * k, pd2: e2 / dp * k, od2: (e2 + 2) / dp * k };
+    Object.keys(v).forEach(function (id) { $(id).value = v[id].toFixed(d); });
+  }
+
+  function rowsFor(n1, n2, e1, e2, dp, nominal, extra) {
+    var items = [
+      ["Ratio (Gear 1 to Gear 2)", (n2 / n1).toFixed(3) + " : 1"],
+      ["Nominal center", fmt(nominal)]
+    ];
+    if (extra > 0) items.push(["Extra center", fmt(extra)]);
+    if (unit() === "mm") items.push(["Center to center in inches", fmtOther(nominal + extra)]);
+    $("rows").innerHTML = items.map(function (r) { return row(r[0], r[1]); }).join("");
+    return items;
+  }
+  function setCopy(dp, n1, n2, heroLine, items) {
+    lastCopy = "Gear Calculator (" + dp + " DP)\nGear 1: " + n1 + " teeth\nGear 2: " + n2 + " teeth\n" + heroLine + "\n" +
+      items.map(function (r) { return r[0] + ": " + r[1]; }).join("\n");
+  }
+  function fail(lab, sub) {
+    setHero(true, lab, "", sub);
+    $("rows").innerHTML = "";
+    $("draw").innerHTML = "";
+    anim = null;
+    $("gearSec").hidden = true;
+    ["pd1", "od1", "pd2", "od2"].forEach(function (id) { $(id).value = ""; });
+    lastCopy = "";
+  }
+
+  // ---------- gear train ----------
+  var MAXG = 8, DEFT = [20, 40, 20, 40, 20, 40, 20, 40], lastCount = 0;
+  function isTrain() { return radio("setup") === "T"; }
+  function tcount() { var n = Math.round(num("gcount")); return isFinite(n) ? Math.max(2, Math.min(MAXG, n)) : 3; }
+  function buildTgrid() {
+    var n = tcount(), box = $("tgrid"), keep = {}, i, html = "";
+    Array.prototype.forEach.call(box.querySelectorAll("input.tin"), function (e) { keep[e.getAttribute("data-i")] = e.value; });
+    for (i = 0; i < n; i++) {
+      var v = keep[i] !== undefined ? keep[i] : DEFT[i];
+      html += '<div class="fld"><label for="tt' + i + '">Gear ' + (i + 1) + '</label><span class="unit-field"><input class="field tin" data-i="' + i + '" id="tt' + i + '" type="number" inputmode="numeric" step="1" min="6" value="' + v + '"></span></div>';
+    }
+    box.innerHTML = html;
+    lastCount = n;
+  }
+  function teethList() {
+    var out = [];
+    Array.prototype.forEach.call($("tgrid").querySelectorAll("input.tin"), function (e) { out.push(parseFloat(e.value)); });
+    return out;
+  }
+  // Which gears share a shaft and which meshes exist. In line: every gear is on its own shaft. Compound: gears 2 and 3, 4 and 5 ... share a shaft.
+  function shaftOf(i, layout) { return layout === "compound" ? (i === 0 ? 0 : Math.ceil(i / 2)) : i; }
+  function trainCalc(teeth, layout, dp, extra, inDir) {
+    var n = teeth.length, g = [], meshes = [], shaftX = [0], abs = [1], sign = [inDir], i;
+    for (i = 0; i < n; i++) g.push({ n: teeth[i], e: teeth[i], shaft: shaftOf(i, layout) });
+    for (i = 0; i < n - 1; i++) {
+      if (g[i].shaft === g[i + 1].shaft) continue;
+      var a = g[i], b = g[i + 1], cdist = (a.n + b.n) / (2 * dp) + extra;
+      meshes.push({ a: i, b: i + 1, dist: cdist });
+      shaftX[b.shaft] = shaftX[a.shaft] + cdist;
+      abs[b.shaft] = abs[a.shaft] * a.n / b.n;
+      sign[b.shaft] = -sign[a.shaft];
+    }
+    g.forEach(function (x) { x.abs = abs[x.shaft]; x.sign = sign[x.shaft]; x.w = abs[x.shaft] * 1080 / teeth[0]; });
+    var last = g[n - 1];
+    return { g: g, meshes: meshes, shaftX: shaftX, ratio: 1 / last.abs, same: last.sign === inDir };
+  }
+  // Counts (2 to 8) that give the wanted output direction for a layout.
+  function countsFor(layout, wantSame) {
+    var ok = [];
+    for (var c = 2; c <= MAXG; c++) {
+      var m = layout === "compound" ? Math.floor(c / 2) : c - 1;   // number of meshes, each one reverses the direction
+      if ((m % 2 === 0) === wantSame) ok.push(c);
+    }
+    return ok;
+  }
+  // Fits tooth counts (12 to 84) to a target reduction.
+  // Tooth counts WCP sells at a pitch (the center distance count when a gear has one), sorted.
+  function soldCounts(dp) {
+    var m = {}, out = [];
+    GEARS.forEach(function (g) { if (g.dp === dp) m[g.ct || g.teeth] = 1; });
+    for (var k in m) out.push(Number(k));
+    return out.sort(function (x, y) { return x - y; });
+  }
+  function solveTrain(R, n, layout, dp, fixI, fixV) {
+    var t = [], L = soldCounts(dp), a, b, i, j, cost;
+    if (!L.length) for (i = 12; i <= 84; i++) L.push(i);
+    function bestPair(q, fa, fb) {
+      var bp = null, bc = 1e9, LA = fa ? [fa] : L, LB = fb ? [fb] : L;
+      for (i = 0; i < LA.length; i++) for (j = 0; j < LB.length; j++) {
+        a = LA[i]; b = LB[j];
+        cost = Math.abs(Math.log(b / a / q)) + 0.003 * Math.abs(a - 18) + 0.001 * Math.abs(b - 40);
+        if (cost < bc) { bc = cost; bp = [a, b]; }
+      }
+      return bp;
+    }
+    function nearest(x) { return L.reduce(function (p, c) { return Math.abs(c - x) < Math.abs(p - x) ? c : p; }, L[0]); }
+    if (layout !== "compound") {
+      var bp = bestPair(R, fixI === 0 ? fixV : 0, fixI === n - 1 ? fixV : 0);
+      t.push(bp[0]);
+      for (var q0 = 1; q0 < n - 1; q0++) t.push(q0 === fixI ? fixV : nearest(24));
+      t.push(bp[1]);
+      return t;
+    }
+    var stages = Math.floor(n / 2), left = R, order = [], res = [], fs = fixI >= 0 && fixI < 2 * stages ? Math.floor(fixI / 2) : -1;
+    if (fs >= 0) order.push(fs);
+    for (var s0 = 0; s0 < stages; s0++) if (s0 !== fs) order.push(s0);
+    order.forEach(function (s, idx) {   // the stage holding the edited gear goes first, the rest share what is left
+      var q = Math.pow(left, 1 / (stages - idx)), p = bestPair(q, fixI === 2 * s ? fixV : 0, fixI === 2 * s + 1 ? fixV : 0);
+      res[s] = p;
+      left = left / (p[1] / p[0]);
+    });
+    res.forEach(function (p) { t.push(p[0], p[1]); });
+    if (n % 2) t.push(fixI === n - 1 ? fixV : t[t.length - 1]);
+    return t;
+  }
+  function cwName(sign) { return sign > 0 ? "Clockwise" : "Counterclockwise"; }
+
+  function renderTrainGears(items, dp) {
+    var sec = $("gearSec");
+    if (!GEARS.length) { sec.hidden = true; return; }
+    var seenN = {}, order = [];
+    items.forEach(function (it, k) { if (!seenN[it.n]) { seenN[it.n] = []; order.push(it.n); } seenN[it.n].push(k + 1); });
+    sec.hidden = false;
+    regear = function () { renderTrainGears(items, dp); };
+    $("gearBody").innerHTML = order.map(function (n) { return gearBox(n, dp, "Gear " + seenN[n].join(", "), false); }).join("");
+  }
+
+  function calcTrain() {
+    var dp = Number(radio("dp")), layout = radio("layout"), inDir = radio("indir") === "ccw" ? -1 : 1;
+    var extraRaw = num("ex"), extra = isFinite(extraRaw) && extraRaw > 0 ? toIn(extraRaw) : 0;
+    if (tcount() !== lastCount) buildTgrid();
+    var teeth = teethList(), i;
+    for (i = 0; i < teeth.length; i++) if (!validTeeth(teeth[i])) return fail("Check Gear " + (i + 1), "Enter a whole number of teeth from 6 to 300.");
+    var m = trainCalc(teeth, layout, dp, extra, inDir);
+    var tgt = num("tgt"), sub = m.same ? "Output spins the same way as the input." : "Output spins the opposite way from the input.";
+    if (isFinite(tgt) && tgt > 0) {
+      var err = (m.ratio / tgt - 1) * 100;
+      sub += Math.abs(err) < 0.05 ? " Matches your " + tgt + " : 1 target." : " Target " + tgt + " : 1, off by " + Math.abs(err).toFixed(1) + "% " + (err > 0 ? "high" : "low") + ".";
+    }
+    setHero(false, "Total reduction", m.ratio.toFixed(3) + " : 1", sub);
+    var items = [];
+    m.g.forEach(function (x, j) {
+      items.push(["Gear " + (j + 1) + " · " + x.n + "T", fmt(x.n / dp) + " PD, " + fmt((x.n + 2) / dp) + " OD"]);
+      items.push(["Gear " + (j + 1) + " spin", cwName(x.sign) + ", " + x.abs.toFixed(3) + "x input speed"]);
+    });
+    m.meshes.forEach(function (ms) { items.push(["Gear " + (ms.a + 1) + " to Gear " + (ms.b + 1) + " center", fmt(ms.dist)]); });
+    if (m.meshes.length > 1) items.push(["First shaft to last shaft", fmt(m.shaftX[m.shaftX.length - 1])]);
+    if (extra > 0) items.push(["Extra center per mesh", fmt(extra)]);
+    items.push(["Layout", layout === "compound" ? "Compound (gears 2 and 3, 4 and 5 share a shaft)" : "In line (each gear meshes the next)"]);
+    $("rows").innerHTML = items.map(function (r) { return row(r[0], r[1]); }).join("");
+    $("opts").hidden = true;
+    drawTrain(m.g.map(function (x) { return { n: x.n, e: x.n, shaft: x.shaft, sign: x.sign, w: x.w }; }), m.shaftX, dp);
+    renderTrainGears(m.g, dp);
+    lastCopy = "Gear Calculator, gear train (" + dp + " DP)\nTeeth: " + teeth.join(", ") + "\nTotal reduction: " + m.ratio.toFixed(3) + " : 1\n" + sub + "\n" + items.map(function (r) { return r[0] + ": " + r[1]; }).join("\n");
+  }
+
+  function calc(skip) {
+    Array.prototype.forEach.call(document.querySelectorAll(".usfx"), function (e) { e.textContent = unit(); });
+    $("twoBox").hidden = isTrain();
+    $("trainBox").hidden = !isTrain();
+    if (isTrain()) { $("opts").hidden = true; return calcTrain(); }
+    var dp = Number(radio("dp")), mode = radio("mode");
+    var n1 = num("t1");
+    var extraRaw = num("ex"), extra = isFinite(extraRaw) && extraRaw > 0 ? toIn(extraRaw) : 0;
+    $("opts").hidden = true;
+    $("t2Fld").hidden = mode === "2";
+    $("cdFld").hidden = mode !== "2";
+    var sfx = unit();
+    Array.prototype.forEach.call(document.querySelectorAll(".usfx"), function (e) { e.textContent = sfx; });
+
+    if (!validTeeth(n1)) return fail("Check Gear 1", "Enter a whole number of teeth from 6 to 300.");
+
+    if (mode === "2") {
+      var cdRaw = num("cd");
+      if (!isFinite(cdRaw) || cdRaw <= 0) return fail("Check desired center", "Enter the center distance you want.");
+      var want = toIn(cdRaw), nominalWanted = want - extra;
+      var exact = 2 * dp * nominalWanted - n1;
+      if (exact < 6) return fail("Center too small", "That center distance is too short for these gears. Gear 2 would need fewer than 6 teeth.");
+      var lo = Math.floor(exact + 1e-9), hi = Math.ceil(exact - 1e-9);
+      var cands = [];
+      var cand = function (n, label) { if (n >= 6 && n <= 300) cands.push({ n: n, label: label, nominal: (n1 + n) / (2 * dp) }); };
+      if (lo === hi) { cand(lo, "Exact fit"); }
+      else {
+        var nearest = (exact - lo) <= (hi - exact) ? lo : hi;
+        cand(lo, lo === nearest ? "Closest (shorter)" : "Shorter center");
+        cand(hi, hi === nearest ? "Closest (longer)" : "Longer center");
+      }
+      if (!cands.length) return fail("No gear fits", "Gear 2 would need more than 300 teeth.");
+      var best = cands.reduce(function (a, b) { return Math.abs(a.nominal + extra - want) <= Math.abs(b.nominal + extra - want) ? a : b; });
+      var off = best.nominal + extra - want;
+      var heroSub = "Center to center " + fmt(best.nominal + extra) + (Math.abs(off) < 0.0005 ? ", exactly the center you asked for." : ", " + fmt(Math.abs(off)) + (off > 0 ? " longer" : " shorter") + " than desired.");
+      setHero(false, "Closest Gear 2", best.n + " teeth", heroSub);
+      $("opts").hidden = false;
+      $("optTiles").style.gridTemplateColumns = "repeat(" + cands.length + ", minmax(0, 1fr))";
+      $("optTiles").innerHTML = cands.map(function (c) {
+        var d = c.nominal + extra - want;
+        return '<button type="button" class="tile' + (c.n === best.n ? ' hl' : '') + '" data-n="' + c.n + '"><div class="count">' + c.n + 'T</div><div class="size">' + esc(c.label) + '</div><div class="pn">' + esc(fmt(c.nominal + extra)) + (Math.abs(d) < 0.0005 ? "" : " (" + (d > 0 ? "+" : "-") + esc(fmt(Math.abs(d))) + ")") + '</div></button>';
+      }).join("");
+      var items2 = rowsFor(n1, best.n, n1, best.n, dp, best.nominal, extra);
+      fill(n1, best.n, dp);
+      drawGears(n1, best.n, n1, best.n, dp, best.nominal + extra);
+      renderGears(n1, best.n, dp, false);
+      setCopy(dp, n1, best.n, "Closest Gear 2: " + best.n + " teeth. " + heroSub, items2);
+      return;
+    }
+
+    var n2 = num("t2");
+    if (!validTeeth(n2)) return fail("Check Gear 2", "Enter a whole number of teeth from 6 to 300.");
+    var e1 = n1, e2 = n2;
+    var nominal = (e1 + e2) / (2 * dp);
+    var sub = (extra > 0 ? "Nominal " + fmt(nominal) + " plus " + fmt(extra) + " extra center." : "Nominal center distance, no extra center added.");
+    setHero(false, "Center to center", fmt(nominal + extra), sub);
+    var items = rowsFor(n1, n2, e1, e2, dp, nominal, extra);
+    fill(e1, e2, dp);
+    drawGears(n1, n2, e1, e2, dp, nominal + extra);
+    renderGears(n1, n2, dp, false);
+    setCopy(dp, n1, n2, "Center to center: " + fmt(nominal + extra), items);
+  }
+
+  // ---------- saved gears and cart ----------
+  var CART_URL = "https://wcproducts.com/cart/add";
+  var saved = [];   // in memory only
+  function cartLink() {
+    var q = [];
+    saved.forEach(function (it, i) { q.push("items[" + i + "][id]=" + it.id, "items[" + i + "][quantity]=" + it.qty); });
+    return CART_URL + "?" + q.join("&") + "&return_to=/cart";
+  }
+  function renderSaved() {
+    $("addAll").href = saved.length ? cartLink() : "https://wcproducts.com/cart/";
+    $("addAll").classList.toggle("off", saved.length === 0);
+    $("addAll").setAttribute("aria-disabled", saved.length === 0 ? "true" : "false");
+    $("clearAll").style.visibility = saved.length ? "visible" : "hidden";
+    if (!saved.length) {
+      $("savedList").innerHTML = '<li class="none">Nothing saved yet. Use Save on a gear in the WCP gears list.</li>';
+      return;
+    }
+    $("savedList").innerHTML = saved.map(function (it, i) {
+      return '<li class="srow" data-i="' + i + '"><div class="meta"><strong>' + esc(it.name) + '</strong><span>' + esc(it.pn) + '</span></div>' +
+        '<div class="qty"><button type="button" data-act="dec" aria-label="Fewer">&minus;</button><span>' + it.qty + '</span><button type="button" data-act="inc" aria-label="More">+</button></div>' +
+        '<button type="button" class="rm" data-act="rm">Remove</button></li>';
+    }).join("");
+  }
+  $("savedList").addEventListener("click", function (e) {
+    var b = e.target.closest ? e.target.closest("[data-act]") : null;
+    if (!b) return;
+    var i = parseInt(b.closest("li").getAttribute("data-i"), 10), act = b.getAttribute("data-act");
+    if (act === "rm" || (act === "dec" && saved[i].qty <= 1)) saved.splice(i, 1);
+    else saved[i].qty += act === "inc" ? 1 : -1;
+    renderSaved();
+  });
+  $("clearAll").addEventListener("click", function () { saved = []; renderSaved(); });
+  $("gearBody").addEventListener("change", function (e) {
+    var t = e.target;
+    if (!t.getAttribute || !t.getAttribute("data-wf")) return;
+    (wf[t.getAttribute("data-wf")] || (wf[t.getAttribute("data-wf")] = {}))[t.getAttribute("data-k")] = t.value;
+    if (regear) regear();
+  });
+  $("gearBody").addEventListener("click", function (e) {
+    var b = e.target.closest ? e.target.closest("[data-save]") : null;
+    if (!b) return;
+    var pn = b.getAttribute("data-save");
+    var g = GEARS.filter(function (x) { return x.pn === pn; })[0];
+    if (!g || !g.id) return;
+    var hit = saved.filter(function (s) { return s.pn === pn; })[0];
+    if (hit) hit.qty += 1; else saved.push({ pn: g.pn, id: g.id, name: gearName(g), qty: 1 });
+    renderSaved();
+  });
+
+  // ---------- events ----------
+  var lastUnit = "in";
+  function convertField(id, from, to) {
+    var v = num(id);
+    if (!isFinite(v)) return;
+    var inches = from === "mm" ? v / MM : v;
+    $(id).value = to === "mm" ? (inches * MM).toFixed(2) : String(Math.round(inches * 1000) / 1000);
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('input[name="unit"]'), function (e) {
+    e.addEventListener("change", function () {
+      var u = unit();
+      if (u !== lastUnit) { convertField("cd", lastUnit, u); convertField("ex", lastUnit, u); lastUnit = u; }
+      calc();
+    });
+  });
+  ["dp", "mode", "setup", "layout", "indir"].forEach(function (name) {
+    Array.prototype.forEach.call(document.querySelectorAll('input[name="' + name + '"]'), function (e) { e.addEventListener("change", function () { calc(); }); });
+  });
+  ["t1", "t2", "cd", "ex", "tgt"].forEach(function (id) { $(id).addEventListener("input", function () { calc(); }); });
+  $("gcount").addEventListener("input", function () { calc(); });
+  $("gcount").addEventListener("change", function () { $("gcount").value = tcount(); calc(); });
+  $("tgrid").addEventListener("input", function () { calc(); });
+  // With a target reduction entered, changing one gear re-fits the others (WCP tooth counts) to keep the train at the target.
+  $("tgrid").addEventListener("change", function (ev) {
+    var R = num("tgt"), el = ev.target;
+    if (!el.classList || !el.classList.contains("tin") || !isFinite(R) || R <= 0) return;
+    var ins = Array.prototype.slice.call($("tgrid").querySelectorAll("input.tin")), k = ins.indexOf(el), v = parseFloat(el.value);
+    if (k < 0 || !(v >= 6)) return;
+    var n = tcount(), layout = radio("layout"), t = solveTrain(R, n, layout, Number(radio("dp")), k, v);
+    ins.forEach(function (e, i) { e.value = t[i]; });
+    var m = trainCalc(t, layout, Number(radio("dp")), 0, 1);
+    $("solveMsg").textContent = "Other gears re-fit to keep the target: " + m.ratio.toFixed(3) + " : 1.";
+    calc();
+  });
+  $("solveBtn").addEventListener("click", function () {
+    var R = num("tgt"), msg = $("solveMsg");
+    if (!isFinite(R) || R <= 0) { msg.textContent = "Enter a target reduction first."; return; }
+    var n = tcount(), layout = radio("layout"), t = solveTrain(R, n, layout, Number(radio("dp")));
+    if (tcount() !== lastCount) buildTgrid();
+    Array.prototype.forEach.call($("tgrid").querySelectorAll("input.tin"), function (e, i) { e.value = t[i]; });
+    var m = trainCalc(t, layout, Number(radio("dp")), 0, 1);
+    msg.textContent = "Closest with WCP gears at " + radio("dp") + " DP: " + m.ratio.toFixed(3) + " : 1." + (soldCounts(Number(radio("dp"))).length < 3 ? " WCP lists very few gears at this pitch." : Math.abs(m.ratio / R - 1) > 0.02 ? " Add gears (compound) to reach more." : "");
+    calc();
+  });
+
+  $("optTiles").addEventListener("click", function (e) {
+    var b = e.target.closest("button[data-n]");
+    if (!b) return;
+    $("t2").value = b.getAttribute("data-n");
+    $("m1").checked = true;
+    calc();
+  });
+
+  $("copyBtn").addEventListener("click", function () {
+    var btn = $("copyBtn"), box = $("copyBox");
+    if (!lastCopy) return;
+    var done = function () { btn.textContent = "Copied"; box.hidden = true; setTimeout(function () { btn.textContent = "Copy Results"; }, 1500); };
+    var manual = function () { box.value = lastCopy; box.hidden = false; box.focus(); box.select(); };
+    try {
+      navigator.clipboard.writeText(lastCopy).then(done, manual);
+    } catch (err) { manual(); }
+  });
+
+  renderSaved();
+  var reduce = false;
+  try { reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) {}
+  function setSpin(on) { spinOn = on; $("spinBtn").textContent = on ? "Pause" : "Play"; $("spinBtn").setAttribute("aria-pressed", on ? "false" : "true"); }
+  $("spinBtn").addEventListener("click", function () { setSpin(!spinOn); });
+  setSpin(!reduce);
+  if (window.requestAnimationFrame) window.requestAnimationFrame(frame);
+
+  calc();
+})();
+</script>
